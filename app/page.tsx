@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { SearchPanel } from "@/components/search-panel"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Menu01Icon } from "@hugeicons/core-free-icons"
+import type { MapBounds } from "@/components/fuel-map"
 import type { FuelStation, FuelType, FuelDataResponse } from "@/lib/types"
 
 const FuelMap = dynamic(
@@ -27,6 +28,7 @@ export default function Page() {
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -55,6 +57,10 @@ export default function Page() {
   // Called from map marker click — popup opens automatically, no need to pan
   const handleMapSelect = useCallback(() => {}, [])
 
+  const handleBoundsChange = useCallback((bounds: MapBounds) => {
+    setMapBounds(bounds)
+  }, [])
+
   return (
     <div className="flex h-svh w-full">
       {/* Desktop sidebar */}
@@ -68,6 +74,7 @@ export default function Page() {
           sortBy={sortBy}
           onSortChange={setSortBy}
           lastUpdated={lastUpdated}
+          mapBounds={mapBounds}
         />
       </aside>
 
@@ -77,6 +84,7 @@ export default function Page() {
           stations={stations}
           selectedFuelType={selectedFuelType}
           onStationSelect={handleMapSelect}
+          onBoundsChange={handleBoundsChange}
           center={mapCenter}
           zoom={mapZoom}
         />
@@ -103,6 +111,7 @@ export default function Page() {
                 sortBy={sortBy}
                 onSortChange={setSortBy}
                 lastUpdated={lastUpdated}
+                mapBounds={mapBounds}
               />
             </SheetContent>
           </Sheet>

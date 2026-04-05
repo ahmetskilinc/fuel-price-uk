@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StationCard } from "@/components/station-card"
+import type { MapBounds } from "@/components/fuel-map"
 import type { FuelStation, FuelType } from "@/lib/types"
 import { FUEL_TYPE_LABELS } from "@/lib/types"
 
@@ -27,6 +28,7 @@ interface SearchPanelProps {
   sortBy: "price" | "name"
   onSortChange: (sort: "price" | "name") => void
   lastUpdated: string | null
+  mapBounds: MapBounds | null
 }
 
 export function SearchPanel({
@@ -38,6 +40,7 @@ export function SearchPanel({
   sortBy,
   onSortChange,
   lastUpdated,
+  mapBounds,
 }: SearchPanelProps) {
   const [search, setSearch] = useState("")
   const [brandFilter, setBrandFilter] = useState<string>("all")
@@ -49,6 +52,19 @@ export function SearchPanel({
 
   const filtered = useMemo(() => {
     let result = stations
+
+    // Filter to stations within the current map viewport
+    if (mapBounds) {
+      result = result.filter((s) => {
+        const { latitude, longitude } = s.location
+        return (
+          latitude >= mapBounds.south &&
+          latitude <= mapBounds.north &&
+          longitude >= mapBounds.west &&
+          longitude <= mapBounds.east
+        )
+      })
+    }
 
     if (search) {
       const q = search.toLowerCase()
@@ -78,7 +94,7 @@ export function SearchPanel({
     }
 
     return result
-  }, [stations, search, brandFilter, selectedFuelType, sortBy])
+  }, [stations, search, brandFilter, selectedFuelType, sortBy, mapBounds])
 
   const avgPrice = useMemo(() => {
     const prices = filtered
