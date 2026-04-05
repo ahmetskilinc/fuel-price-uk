@@ -26,6 +26,7 @@ export default function Page() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(UK_CENTER)
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -34,6 +35,7 @@ export default function Page() {
         if (!res.ok) throw new Error("Failed to fetch")
         const data: FuelDataResponse = await res.json()
         setStations(data.stations)
+        setLastUpdated(data.last_updated)
       } catch (err) {
         console.error("Failed to load fuel prices:", err)
       } finally {
@@ -65,6 +67,7 @@ export default function Page() {
           onStationSelect={handleSidebarSelect}
           sortBy={sortBy}
           onSortChange={setSortBy}
+          lastUpdated={lastUpdated}
         />
       </aside>
 
@@ -99,6 +102,7 @@ export default function Page() {
                 onStationSelect={handleSidebarSelect}
                 sortBy={sortBy}
                 onSortChange={setSortBy}
+                lastUpdated={lastUpdated}
               />
             </SheetContent>
           </Sheet>

@@ -26,6 +26,7 @@ interface SearchPanelProps {
   onStationSelect: (station: FuelStation) => void
   sortBy: "price" | "name"
   onSortChange: (sort: "price" | "name") => void
+  lastUpdated: string | null
 }
 
 export function SearchPanel({
@@ -36,6 +37,7 @@ export function SearchPanel({
   onStationSelect,
   sortBy,
   onSortChange,
+  lastUpdated,
 }: SearchPanelProps) {
   const [search, setSearch] = useState("")
   const [brandFilter, setBrandFilter] = useState<string>("all")
@@ -101,6 +103,14 @@ export function SearchPanel({
           <p className="text-xs text-muted-foreground">
             Live prices from major UK retailers
           </p>
+          {lastUpdated && (
+            <p className="text-xs text-muted-foreground">
+              Updated {new Date(lastUpdated).toLocaleString("en-GB", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+          )}
         </div>
 
         <Input
