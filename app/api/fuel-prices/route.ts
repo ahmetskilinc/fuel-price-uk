@@ -29,6 +29,11 @@ function normalizeStation(
 
     if (!location?.latitude || !location?.longitude) return null
 
+    // Filter out stations outside the UK bounding box (e.g. Gibraltar)
+    const lat = Number(location.latitude)
+    const lng = Number(location.longitude)
+    if (lat < 49.9 || lat > 60.9 || lng < -8.2 || lng > 1.8) return null
+
     return {
       site_id: String(raw.site_id ?? ""),
       brand: String(raw.brand ?? fallbackBrand),
