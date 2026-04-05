@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import type { FuelStation, FuelType } from "@/lib/types"
+import type { FuelStation, FuelType, MapBounds } from "@/lib/types"
 import { FUEL_TYPE_SHORT } from "@/lib/types"
 
 function formatPrice(price: number | null): string {
@@ -73,6 +73,7 @@ interface FuelMapProps {
   stations: FuelStation[]
   selectedFuelType: FuelType
   onStationSelect: (station: FuelStation) => void
+  onBoundsChange?: (bounds: MapBounds) => void
   center: [number, number]
   zoom: number
 }
@@ -81,6 +82,7 @@ export function FuelMap({
   stations,
   selectedFuelType,
   onStationSelect,
+  onBoundsChange,
   center,
   zoom,
 }: FuelMapProps) {
@@ -91,10 +93,12 @@ export function FuelMap({
   const stationsRef = useRef(stations)
   const fuelTypeRef = useRef(selectedFuelType)
   const onStationSelectRef = useRef(onStationSelect)
+  const onBoundsChangeRef = useRef(onBoundsChange)
 
   stationsRef.current = stations
   fuelTypeRef.current = selectedFuelType
   onStationSelectRef.current = onStationSelect
+  onBoundsChangeRef.current = onBoundsChange
 
   const syncMarkers = useCallback((preservePopups = false) => {
     const map = mapRef.current
@@ -197,9 +201,20 @@ export function FuelMap({
     const map = mapRef.current
     if (!map) return
 
-    const onMoveEnd = () => syncMarkers(true)
+    const onMoveEnd = () => {
+      syncMarkers(true)
+      const b = map.getBounds()
+      onBoundsChangeRef.current?.({
+        north: b.getNorth(),
+        south: b.getSouth(),
+        east: b.getEast(),
+        west: b.getWest(),
+      })
+    }
 
     map.on("moveend", onMoveEnd)
+    // Fire once on init
+    onMoveEnd()
     return () => {
       map.off("moveend", onMoveEnd)
     }

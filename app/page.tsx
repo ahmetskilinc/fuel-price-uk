@@ -2,16 +2,22 @@
 
 import { useEffect, useState, useCallback } from "react"
 import dynamic from "next/dynamic"
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { SearchPanel } from "@/components/search-panel"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Menu01Icon } from "@hugeicons/core-free-icons"
-import type { FuelStation, FuelType, FuelDataResponse } from "@/lib/types"
+import type { FuelStation, FuelType, FuelDataResponse, MapBounds } from "@/lib/types"
 
 const FuelMap = dynamic(
-  () => import("@/components/fuel-map").then((mod) => ({ default: mod.FuelMap })),
-  { ssr: false },
+  () =>
+    import("@/components/fuel-map").then((mod) => ({ default: mod.FuelMap })),
+  { ssr: false }
 )
 
 // Default center: roughly the middle of the UK
@@ -26,6 +32,7 @@ export default function Page() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(UK_CENTER)
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
@@ -55,6 +62,10 @@ export default function Page() {
   // Called from map marker click — popup opens automatically, no need to pan
   const handleMapSelect = useCallback(() => {}, [])
 
+  const handleBoundsChange = useCallback((bounds: MapBounds) => {
+    setMapBounds(bounds)
+  }, [])
+
   return (
     <div className="flex h-svh w-full">
       {/* Desktop sidebar */}
@@ -67,6 +78,7 @@ export default function Page() {
           onStationSelect={handleSidebarSelect}
           sortBy={sortBy}
           onSortChange={setSortBy}
+          mapBounds={mapBounds}
           lastUpdated={lastUpdated}
         />
       </aside>
@@ -77,22 +89,23 @@ export default function Page() {
           stations={stations}
           selectedFuelType={selectedFuelType}
           onStationSelect={handleMapSelect}
+          onBoundsChange={handleBoundsChange}
           center={mapCenter}
           zoom={mapZoom}
         />
 
         {/* Mobile sheet trigger */}
-        <div className="absolute top-4 left-4 z-[1000] md:hidden">
+        <div className="absolute top-4 left-4 z-1000 md:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger
-              render={
-                <Button size="icon" className="shadow-lg" />
-              }
-            >
+            <SheetTrigger render={<Button size="icon" className="shadow-lg" />}>
               <HugeiconsIcon icon={Menu01Icon} size={20} strokeWidth={2} />
               <span className="sr-only">Open menu</span>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[85vw] sm:max-w-[400px] p-0" showCloseButton={false}>
+            <SheetContent
+              side="left"
+              className="w-[85vw] p-0 sm:max-w-[400px]"
+              showCloseButton={false}
+            >
               <SheetTitle className="sr-only">Station search</SheetTitle>
               <SearchPanel
                 stations={stations}
@@ -102,6 +115,7 @@ export default function Page() {
                 onStationSelect={handleSidebarSelect}
                 sortBy={sortBy}
                 onSortChange={setSortBy}
+                mapBounds={mapBounds}
                 lastUpdated={lastUpdated}
               />
             </SheetContent>
@@ -110,7 +124,7 @@ export default function Page() {
 
         {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 z-[999] flex items-center justify-center bg-background/80">
+          <div className="absolute inset-0 z-999 flex items-center justify-center bg-background/80">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
               <p className="text-sm text-muted-foreground">

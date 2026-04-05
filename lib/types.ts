@@ -22,6 +22,13 @@ export interface FuelDataResponse {
 
 export type FuelType = "E10" | "E5" | "B7" | "SDV"
 
+export interface MapBounds {
+  north: number
+  south: number
+  east: number
+  west: number
+}
+
 export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
   E10: "Unleaded (E10)",
   E5: "Super Unleaded (E5)",

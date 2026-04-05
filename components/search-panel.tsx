@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StationCard } from "@/components/station-card"
-import type { FuelStation, FuelType } from "@/lib/types"
+import type { FuelStation, FuelType, MapBounds } from "@/lib/types"
 import { FUEL_TYPE_LABELS } from "@/lib/types"
 
 interface SearchPanelProps {
@@ -26,6 +26,7 @@ interface SearchPanelProps {
   onStationSelect: (station: FuelStation) => void
   sortBy: "price" | "name"
   onSortChange: (sort: "price" | "name") => void
+  mapBounds: MapBounds | null
   lastUpdated: string | null
 }
 
@@ -37,6 +38,7 @@ export function SearchPanel({
   onStationSelect,
   sortBy,
   onSortChange,
+  mapBounds,
   lastUpdated,
 }: SearchPanelProps) {
   const [search, setSearch] = useState("")
@@ -50,13 +52,26 @@ export function SearchPanel({
   const filtered = useMemo(() => {
     let result = stations
 
+    // Filter to stations within the current map viewport
+    if (mapBounds) {
+      result = result.filter((s) => {
+        const { latitude, longitude } = s.location
+        return (
+          latitude >= mapBounds.south &&
+          latitude <= mapBounds.north &&
+          longitude >= mapBounds.west &&
+          longitude <= mapBounds.east
+        )
+      })
+    }
+
     if (search) {
       const q = search.toLowerCase()
       result = result.filter(
         (s) =>
           s.address.toLowerCase().includes(q) ||
           s.postcode.toLowerCase().includes(q) ||
-          s.brand.toLowerCase().includes(q),
+          s.brand.toLowerCase().includes(q)
       )
     }
 
@@ -78,7 +93,7 @@ export function SearchPanel({
     }
 
     return result
-  }, [stations, search, brandFilter, selectedFuelType, sortBy])
+  }, [stations, search, brandFilter, selectedFuelType, sortBy, mapBounds])
 
   const avgPrice = useMemo(() => {
     const prices = filtered
@@ -105,7 +120,8 @@ export function SearchPanel({
           </p>
           {lastUpdated && (
             <p className="text-xs text-muted-foreground">
-              Updated {new Date(lastUpdated).toLocaleString("en-GB", {
+              Updated{" "}
+              {new Date(lastUpdated).toLocaleString("en-GB", {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}
@@ -133,7 +149,7 @@ export function SearchPanel({
                   <SelectItem key={key} value={key}>
                     {label}
                   </SelectItem>
-                ),
+                )
               )}
             </SelectContent>
           </Select>
