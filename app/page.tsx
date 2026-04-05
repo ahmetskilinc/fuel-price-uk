@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react"
 import dynamic from "next/dynamic"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { SearchPanel } from "@/components/search-panel"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Menu01Icon } from "@hugeicons/core-free-icons"
 import type { FuelStation, FuelType, FuelDataResponse } from "@/lib/types"
 
 const FuelMap = dynamic(
@@ -77,16 +79,18 @@ export default function Page() {
         />
 
         {/* Mobile sheet trigger */}
-        <div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2 md:hidden">
+        <div className="absolute top-4 left-4 z-[1000] md:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger
-              render={<Button size="lg" className="shadow-lg" />}
+              render={
+                <Button size="icon" className="shadow-lg" />
+              }
             >
-              {loading
-                ? "Loading..."
-                : `${stations.length} stations`}
+              <HugeiconsIcon icon={Menu01Icon} size={20} strokeWidth={2} />
+              <span className="sr-only">Open menu</span>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[80svh] p-0">
+            <SheetContent side="left" className="w-[85vw] sm:max-w-[400px] p-0" showCloseButton={false}>
+              <SheetTitle className="sr-only">Station search</SheetTitle>
               <SearchPanel
                 stations={stations}
                 loading={loading}
