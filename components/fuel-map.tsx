@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import type { FuelStation, FuelType } from "@/lib/types"
+import type { FuelStation, FuelType, MapBounds } from "@/lib/types"
 import { FUEL_TYPE_SHORT } from "@/lib/types"
 
 function formatPrice(price: number | null): string {
@@ -67,13 +67,6 @@ function buildPopupContent(station: FuelStation): string {
 
 function stationKey(station: FuelStation): string {
   return station.site_id || `${station.brand}-${station.location.latitude}-${station.location.longitude}`
-}
-
-export interface MapBounds {
-  north: number
-  south: number
-  east: number
-  west: number
 }
 
 interface FuelMapProps {

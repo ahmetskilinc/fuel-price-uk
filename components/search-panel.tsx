@@ -15,8 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StationCard } from "@/components/station-card"
-import type { MapBounds } from "@/components/fuel-map"
-import type { FuelStation, FuelType } from "@/lib/types"
+import type { FuelStation, FuelType, MapBounds } from "@/lib/types"
 import { FUEL_TYPE_LABELS } from "@/lib/types"
 
 interface SearchPanelProps {

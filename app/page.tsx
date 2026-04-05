@@ -10,10 +10,9 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { SearchPanel } from "@/components/search-panel"
-import type { MapBounds } from "@/components/fuel-map"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Menu01Icon } from "@hugeicons/core-free-icons"
-import type { FuelStation, FuelType, FuelDataResponse } from "@/lib/types"
+import type { FuelStation, FuelType, FuelDataResponse, MapBounds } from "@/lib/types"
 
 const FuelMap = dynamic(
   () =>
