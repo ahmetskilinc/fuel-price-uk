@@ -2,15 +2,23 @@
 
 import { useEffect, useState, useCallback } from "react"
 import dynamic from "next/dynamic"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { SearchPanel } from "@/components/search-panel"
 import type { MapBounds } from "@/components/fuel-map"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Menu01Icon } from "@hugeicons/core-free-icons"
 import type { FuelStation, FuelType, FuelDataResponse } from "@/lib/types"
 
 const FuelMap = dynamic(
-  () => import("@/components/fuel-map").then((mod) => ({ default: mod.FuelMap })),
-  { ssr: false },
+  () =>
+    import("@/components/fuel-map").then((mod) => ({ default: mod.FuelMap })),
+  { ssr: false }
 )
 
 // Default center: roughly the middle of the UK
@@ -26,6 +34,7 @@ export default function Page() {
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -34,6 +43,7 @@ export default function Page() {
         if (!res.ok) throw new Error("Failed to fetch")
         const data: FuelDataResponse = await res.json()
         setStations(data.stations)
+        setLastUpdated(data.last_updated)
       } catch (err) {
         console.error("Failed to load fuel prices:", err)
       } finally {
@@ -70,6 +80,7 @@ export default function Page() {
           sortBy={sortBy}
           onSortChange={setSortBy}
           mapBounds={mapBounds}
+          lastUpdated={lastUpdated}
         />
       </aside>
 
@@ -85,16 +96,18 @@ export default function Page() {
         />
 
         {/* Mobile sheet trigger */}
-        <div className="absolute bottom-6 left-1/2 z-[1000] -translate-x-1/2 md:hidden">
+        <div className="absolute top-4 left-4 z-1000 md:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger
-              render={<Button size="lg" className="shadow-lg" />}
-            >
-              {loading
-                ? "Loading..."
-                : `${stations.length} stations`}
+            <SheetTrigger render={<Button size="icon" className="shadow-lg" />}>
+              <HugeiconsIcon icon={Menu01Icon} size={20} strokeWidth={2} />
+              <span className="sr-only">Open menu</span>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[80svh] p-0">
+            <SheetContent
+              side="left"
+              className="w-[85vw] p-0 sm:max-w-[400px]"
+              showCloseButton={false}
+            >
+              <SheetTitle className="sr-only">Station search</SheetTitle>
               <SearchPanel
                 stations={stations}
                 loading={loading}
@@ -104,6 +117,7 @@ export default function Page() {
                 sortBy={sortBy}
                 onSortChange={setSortBy}
                 mapBounds={mapBounds}
+                lastUpdated={lastUpdated}
               />
             </SheetContent>
           </Sheet>
@@ -111,7 +125,7 @@ export default function Page() {
 
         {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 z-[999] flex items-center justify-center bg-background/80">
+          <div className="absolute inset-0 z-999 flex items-center justify-center bg-background/80">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
               <p className="text-sm text-muted-foreground">
