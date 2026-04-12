@@ -207,10 +207,11 @@ export function FuelMap({
 
         const mapkit = window.mapkit
         const map = new mapkit.Map(containerRef.current, {
-          showsUserLocationControl: false,
+          showsUserLocationControl: true,
           showsCompass: mapkit.FeatureVisibility.Adaptive,
           showsZoomControl: true,
-          showsMapTypeControl: false,
+          showsMapTypeControl: true,
+          showsScale: mapkit.FeatureVisibility.Adaptive,
           isRotationEnabled: false,
         })
 
