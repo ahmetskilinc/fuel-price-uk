@@ -108,7 +108,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
         cannot edit their feeds. For bugs with the site itself, please open
         an issue on{" "}
         <a
-          href="https://github.com/ahmetskilinc"
+          href="https://github.com/ahmetskilinc/fuel-price-uk/issues"
           target="_blank"
           rel="noopener noreferrer"
           className="text-foreground underline-offset-4 hover:underline"
