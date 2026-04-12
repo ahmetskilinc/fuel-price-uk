@@ -12,7 +12,14 @@ import { Button } from "@/components/ui/button"
 import { SearchPanel } from "@/components/search-panel"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Menu01Icon } from "@hugeicons/core-free-icons"
-import type { FuelStation, FuelType, FuelDataResponse, MapBounds } from "@/lib/types"
+import type {
+  FuelStation,
+  FuelType,
+  FuelDataResponse,
+  MapBounds,
+  SearchOrigin,
+  SortBy,
+} from "@/lib/types"
 
 const FuelMap = dynamic(
   () =>
@@ -24,16 +31,28 @@ const FuelMap = dynamic(
 const UK_CENTER: [number, number] = [53.5, -2.5]
 const DEFAULT_ZOOM = 7
 
+// Pick a Leaflet zoom level roughly appropriate to a given radius in miles.
+function zoomForRadiusMiles(miles: number): number {
+  if (miles <= 1) return 14
+  if (miles <= 3) return 13
+  if (miles <= 5) return 12
+  if (miles <= 10) return 11
+  if (miles <= 25) return 10
+  return 9
+}
+
 export default function Page() {
   const [stations, setStations] = useState<FuelStation[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedFuelType, setSelectedFuelType] = useState<FuelType>("E10")
-  const [sortBy, setSortBy] = useState<"price" | "name">("price")
+  const [sortBy, setSortBy] = useState<SortBy>("price")
   const [mapCenter, setMapCenter] = useState<[number, number]>(UK_CENTER)
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [searchOrigin, setSearchOrigin] = useState<SearchOrigin | null>(null)
+  const [radiusMiles, setRadiusMiles] = useState<number>(5)
 
   useEffect(() => {
     async function fetchData() {
@@ -52,6 +71,14 @@ export default function Page() {
     fetchData()
   }, [])
 
+  // Whenever the search origin or radius changes, re-centre and re-zoom the
+  // map on it. Clearing the origin leaves the map where it is.
+  useEffect(() => {
+    if (!searchOrigin) return
+    setMapCenter([searchOrigin.latitude, searchOrigin.longitude])
+    setMapZoom(zoomForRadiusMiles(radiusMiles))
+  }, [searchOrigin, radiusMiles])
+
   // Called from sidebar list — pan the map to the station
   const handleSidebarSelect = useCallback((station: FuelStation) => {
     setMapCenter([station.location.latitude, station.location.longitude])
@@ -66,21 +93,27 @@ export default function Page() {
     setMapBounds(bounds)
   }, [])
 
+  const panelProps = {
+    stations,
+    loading,
+    selectedFuelType,
+    onFuelTypeChange: setSelectedFuelType,
+    onStationSelect: handleSidebarSelect,
+    sortBy,
+    onSortChange: setSortBy,
+    mapBounds,
+    lastUpdated,
+    searchOrigin,
+    onSearchOriginChange: setSearchOrigin,
+    radiusMiles,
+    onRadiusChange: setRadiusMiles,
+  }
+
   return (
     <div className="flex h-svh w-full">
       {/* Desktop sidebar */}
       <aside className="hidden w-[400px] shrink-0 border-r md:flex md:flex-col">
-        <SearchPanel
-          stations={stations}
-          loading={loading}
-          selectedFuelType={selectedFuelType}
-          onFuelTypeChange={setSelectedFuelType}
-          onStationSelect={handleSidebarSelect}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          mapBounds={mapBounds}
-          lastUpdated={lastUpdated}
-        />
+        <SearchPanel {...panelProps} />
       </aside>
 
       {/* Map area */}
@@ -107,17 +140,7 @@ export default function Page() {
               showCloseButton={false}
             >
               <SheetTitle className="sr-only">Station search</SheetTitle>
-              <SearchPanel
-                stations={stations}
-                loading={loading}
-                selectedFuelType={selectedFuelType}
-                onFuelTypeChange={setSelectedFuelType}
-                onStationSelect={handleSidebarSelect}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-                mapBounds={mapBounds}
-                lastUpdated={lastUpdated}
-              />
+              <SearchPanel {...panelProps} />
             </SheetContent>
           </Sheet>
         </div>
