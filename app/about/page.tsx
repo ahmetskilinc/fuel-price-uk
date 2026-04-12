@@ -83,7 +83,7 @@ const STEPS: {
   },
   {
     title: "Display",
-    body: "Everything lands on a single Leaflet map you can search, filter and pan in real time.",
+    body: "Everything lands on a single Apple Maps view you can search, filter and pan in real time.",
     icon: MapsLocation01Icon,
   },
 ]
