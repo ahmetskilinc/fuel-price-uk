@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import type { FuelStation, FuelType, MapBounds } from "@/lib/types"
 import { FUEL_TYPE_SHORT } from "@/lib/types"
@@ -186,14 +186,94 @@ export function FuelMap({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const annotationsRef = useRef<Map<string, any>>(new Map())
+  const stationsRef = useRef(stations)
+  const fuelTypeRef = useRef(selectedFuelType)
   const onStationSelectRef = useRef(onStationSelect)
   const onBoundsChangeRef = useRef(onBoundsChange)
   const readyRef = useRef(false)
 
+  stationsRef.current = stations
+  fuelTypeRef.current = selectedFuelType
   onStationSelectRef.current = onStationSelect
   onBoundsChangeRef.current = onBoundsChange
 
   const { resolvedTheme } = useTheme()
+
+  // Sync annotations with viewport — add visible stations, remove out-of-view
+  // ones. Capped at 500 to keep MapKit responsive.
+  const syncAnnotations = useCallback(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current || !window.mapkit) return
+    const mapkit = window.mapkit
+
+    const r = map.region.toBoundingRegion()
+    const currentStations = stationsRef.current
+    const existing = annotationsRef.current
+
+    const visible = currentStations.filter((s) => {
+      const lat = s.location.latitude
+      const lng = s.location.longitude
+      return (
+        lat <= r.northLatitude &&
+        lat >= r.southLatitude &&
+        lng <= r.eastLongitude &&
+        lng >= r.westLongitude
+      )
+    })
+    const toRender = visible.slice(0, 500)
+    const visibleKeys = new Set(toRender.map(stationKey))
+
+    // Remove annotations that are no longer in view
+    const toRemove: any[] = []
+    for (const [key, annotation] of existing) {
+      if (!visibleKeys.has(key)) {
+        toRemove.push(annotation)
+        existing.delete(key)
+      }
+    }
+    if (toRemove.length > 0) map.removeAnnotations(toRemove)
+
+    // Add annotations for newly visible stations
+    const toAdd: any[] = []
+    for (const station of toRender) {
+      const key = stationKey(station)
+      if (existing.has(key)) continue
+      const coord = new mapkit.Coordinate(
+        station.location.latitude,
+        station.location.longitude,
+      )
+      const annotation = new mapkit.Annotation(
+        coord,
+        () => createMarkerElement(station, fuelTypeRef.current),
+        {
+          data: { station },
+          calloutEnabled: true,
+          callout: {
+            calloutElementForAnnotation: () => createCalloutElement(station),
+          },
+        },
+      )
+      annotation.addEventListener("select", () => {
+        onStationSelectRef.current(station)
+      })
+      existing.set(key, annotation)
+      toAdd.push(annotation)
+    }
+    if (toAdd.length > 0) map.addAnnotations(toAdd)
+  }, [])
+
+  // Rebuild all annotations — used when stations array or fuel type changes
+  // (marker colors/labels depend on both).
+  const rebuildAnnotations = useCallback(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    const existing = annotationsRef.current
+    if (existing.size > 0) {
+      map.removeAnnotations(Array.from(existing.values()))
+      existing.clear()
+    }
+    syncAnnotations()
+  }, [syncAnnotations])
 
   // Initialize map
   useEffect(() => {
@@ -230,12 +310,14 @@ export function FuelMap({
             east: r.eastLongitude,
             west: r.westLongitude,
           })
+          syncAnnotations()
         }
         map.addEventListener("region-change-end", onRegionChangeEnd)
 
         mapRef.current = map
         readyRef.current = true
-        // Fire once on init
+        // Fire once on init so the sidebar gets initial bounds and the map
+        // gets its first batch of annotations.
         onRegionChangeEnd()
       })
       .catch((err) => {
@@ -268,50 +350,11 @@ export function FuelMap({
         : window.mapkit.Map.ColorSchemes.Light
   }, [resolvedTheme])
 
-  // Rebuild annotations when stations or fuel type changes
+  // Rebuild annotations when stations or fuel type changes (marker colors and
+  // labels depend on both).
   useEffect(() => {
-    const map = mapRef.current
-    if (!map || !readyRef.current || !window.mapkit) return
-
-    const mapkit = window.mapkit
-    const existing = annotationsRef.current
-
-    // Clear previous annotations
-    if (existing.size > 0) {
-      map.removeAnnotations(Array.from(existing.values()))
-      existing.clear()
-    }
-
-    const newAnnotations: any[] = []
-    for (const station of stations) {
-      const coord = new mapkit.Coordinate(
-        station.location.latitude,
-        station.location.longitude,
-      )
-      const annotation = new mapkit.Annotation(
-        coord,
-        () => createMarkerElement(station, selectedFuelType),
-        {
-          anchorOffset: new DOMPoint(0, 0),
-          data: { station },
-          calloutEnabled: true,
-          clusteringIdentifier: "fuel",
-          callout: {
-            calloutElementForAnnotation: () => createCalloutElement(station),
-          },
-        },
-      )
-      annotation.addEventListener("select", () => {
-        onStationSelectRef.current(station)
-      })
-      existing.set(stationKey(station), annotation)
-      newAnnotations.push(annotation)
-    }
-
-    if (newAnnotations.length > 0) {
-      map.addAnnotations(newAnnotations)
-    }
-  }, [stations, selectedFuelType])
+    rebuildAnnotations()
+  }, [stations, selectedFuelType, rebuildAnnotations])
 
   // Pan to center/zoom when they change from outside (sidebar selection)
   useEffect(() => {
