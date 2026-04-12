@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -113,20 +114,28 @@ export function SearchPanel({
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       <div className="space-y-3 p-4">
-        <div>
-          <h1 className="text-lg font-semibold">UK Fuel Prices</h1>
-          <p className="text-xs text-muted-foreground">
-            Live prices from major UK retailers
-          </p>
-          {lastUpdated && (
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-lg font-semibold">UK Fuel Prices</h1>
             <p className="text-xs text-muted-foreground">
-              Updated{" "}
-              {new Date(lastUpdated).toLocaleString("en-GB", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
+              Live prices from major UK retailers
             </p>
-          )}
+            {lastUpdated && (
+              <p className="text-xs text-muted-foreground">
+                Updated{" "}
+                {new Date(lastUpdated).toLocaleString("en-GB", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </p>
+            )}
+          </div>
+          <Link
+            href="/about"
+            className="shrink-0 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            About
+          </Link>
         </div>
 
         <Input
