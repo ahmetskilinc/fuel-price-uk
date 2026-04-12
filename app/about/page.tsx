@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -87,7 +88,7 @@ const STEPS: {
   },
 ]
 
-const FAQS: { q: string; a: React.ReactNode }[] = [
+const FAQS: { q: string; a: ReactNode }[] = [
   {
     q: "How fresh is the data?",
     a: "We re-fetch every retailer feed regularly throughout the day. The Fuel Finder scheme requires retailers to publish price changes within 30 minutes, so prices here are typically minutes — not hours — old. That said, always check the actual pump.",
