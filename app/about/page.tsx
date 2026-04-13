@@ -83,7 +83,7 @@ const STEPS: {
   },
   {
     title: "Display",
-    body: "Everything lands on a single Leaflet map you can search, filter and pan in real time.",
+    body: "Everything lands on a single Apple Maps view you can search, filter and pan in real time.",
     icon: MapsLocation01Icon,
   },
 ]
@@ -122,7 +122,7 @@ const FAQS: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Do you track me or store my location?",
-    a: "No. There are no analytics, no tracking cookies, and no accounts. Map tiles are loaded from OpenStreetMap; your browser talks to them directly. If you use any location features, your coordinates stay in your browser.",
+    a: "No. There are no analytics, no tracking cookies, and no accounts. The map itself is Apple Maps, served via Apple's MapKit JS — tiles are requested from Apple under our developer credentials, not yours. If you use any location features, your coordinates stay in your browser.",
   },
 ]
 
@@ -352,7 +352,7 @@ export default function AboutPage() {
                   <span className="font-medium text-foreground">
                     Ahmet Kilinc
                   </span>
-                  . Map tiles by OpenStreetMap contributors.
+                  . Map rendered with Apple MapKit JS.
                 </CardDescription>
               </CardHeader>
               <CardContent>
