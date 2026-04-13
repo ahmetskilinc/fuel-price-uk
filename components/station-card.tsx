@@ -21,12 +21,14 @@ interface StationCardProps {
   station: FuelStation
   selectedFuelType: FuelType
   rank?: number
+  distance?: number
 }
 
 export function StationCard({
   station,
   selectedFuelType,
   rank,
+  distance,
 }: StationCardProps) {
   const selectedPrice = station.prices[selectedFuelType]
 
@@ -49,6 +51,11 @@ export function StationCard({
             {station.postcode && (
               <p className="text-xs font-medium text-muted-foreground">
                 {station.postcode}
+              </p>
+            )}
+            {distance != null && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi away
               </p>
             )}
           </div>

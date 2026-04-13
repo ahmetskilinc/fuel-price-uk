@@ -29,6 +29,14 @@ export interface MapBounds {
   west: number
 }
 
+export type SortBy = "price" | "name" | "distance"
+
+export interface SearchOrigin {
+  latitude: number
+  longitude: number
+  label: string
+}
+
 export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
   E10: "Unleaded (E10)",
   E5: "Super Unleaded (E5)",
