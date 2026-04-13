@@ -185,7 +185,12 @@ export function FuelMap({
 }: FuelMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
-  const annotationsRef = useRef<Map<string, any>>(new Map())
+  // Each entry holds the annotation plus the exact "select" handler reference
+  // we passed to addEventListener, so we can removeEventListener cleanly when
+  // the annotation leaves the viewport or the map is rebuilt/destroyed.
+  const annotationsRef = useRef<
+    Map<string, { annotation: any; selectHandler: () => void }>
+  >(new Map())
   const stationsRef = useRef(stations)
   const fuelTypeRef = useRef(selectedFuelType)
   const onStationSelectRef = useRef(onStationSelect)
@@ -225,9 +230,17 @@ export function FuelMap({
 
     // Remove annotations that are no longer in view
     const toRemove: any[] = []
-    for (const [key, annotation] of existing) {
+    for (const [key, entry] of existing) {
       if (!visibleKeys.has(key)) {
-        toRemove.push(annotation)
+        try {
+          entry.annotation.removeEventListener(
+            "select",
+            entry.selectHandler,
+          )
+        } catch {
+          // ignore teardown errors
+        }
+        toRemove.push(entry.annotation)
         existing.delete(key)
       }
     }
@@ -253,10 +266,11 @@ export function FuelMap({
           },
         },
       )
-      annotation.addEventListener("select", () => {
+      const selectHandler = () => {
         onStationSelectRef.current(station)
-      })
-      existing.set(key, annotation)
+      }
+      annotation.addEventListener("select", selectHandler)
+      existing.set(key, { annotation, selectHandler })
       toAdd.push(annotation)
     }
     if (toAdd.length > 0) map.addAnnotations(toAdd)
@@ -269,7 +283,19 @@ export function FuelMap({
     if (!map || !readyRef.current) return
     const existing = annotationsRef.current
     if (existing.size > 0) {
-      map.removeAnnotations(Array.from(existing.values()))
+      const annotations: any[] = []
+      for (const entry of existing.values()) {
+        try {
+          entry.annotation.removeEventListener(
+            "select",
+            entry.selectHandler,
+          )
+        } catch {
+          // ignore teardown errors
+        }
+        annotations.push(entry.annotation)
+      }
+      map.removeAnnotations(annotations)
       existing.clear()
     }
     syncAnnotations()
@@ -343,6 +369,20 @@ export function FuelMap({
             // ignore teardown errors
           }
           regionChangeEndHandler = null
+        }
+        // Unsubscribe every annotation's "select" handler before nuking the
+        // map — destroy() sweeps them internally, but doing it explicitly
+        // guarantees closures release their captured stations even if
+        // destroy() throws mid-teardown.
+        for (const entry of annotations.values()) {
+          try {
+            entry.annotation.removeEventListener(
+              "select",
+              entry.selectHandler,
+            )
+          } catch {
+            // ignore teardown errors
+          }
         }
         try {
           mapInstance.destroy()
