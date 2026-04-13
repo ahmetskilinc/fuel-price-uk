@@ -43,6 +43,13 @@ function loadMapkit(): Promise<void> {
   return mapkitLoadPromise
 }
 
+// Module-level ref so the singleton authorizationCallback closure can reach
+// the currently-mounted FuelMap's onAuthError prop. Written by the component
+// on every render; cleared on unmount.
+const authErrorHandlerRef: { current: ((err: Error) => void) | null } = {
+  current: null,
+}
+
 let mapkitInitialized = false
 function initMapkit() {
   if (mapkitInitialized) return
@@ -50,10 +57,25 @@ function initMapkit() {
   window.mapkit.init({
     authorizationCallback: (done: (token: string) => void) => {
       fetch("/api/mapkit-token")
-        .then((r) => r.text())
-        .then(done)
+        .then((r) => {
+          if (!r.ok) {
+            // fetch() resolves even on 4xx/5xx — surface it as an error so
+            // we don't hand the error body to MapKit as if it were a JWT.
+            throw new Error(
+              `MapKit token request failed: HTTP ${r.status} ${r.statusText}`,
+            )
+          }
+          return r.text()
+        })
+        .then((token) => done(token))
         .catch((err) => {
           console.error("Failed to fetch MapKit token:", err)
+          const error = err instanceof Error ? err : new Error(String(err))
+          authErrorHandlerRef.current?.(error)
+          // Always call done so MapKit doesn't hang waiting for a token.
+          // Passing an empty string makes MapKit's internal auth fail fast
+          // and allows the component's onAuthError handler to drive the UI.
+          done("")
         })
     },
     language: "en-GB",
@@ -171,6 +193,12 @@ interface FuelMapProps {
   selectedFuelType: FuelType
   onStationSelect: (station: FuelStation) => void
   onBoundsChange?: (bounds: MapBounds) => void
+  /**
+   * Called when the MapKit JS authorization callback fails — e.g. the token
+   * endpoint returns a non-2xx response or the network request fails. Lets
+   * the parent render an error/retry state instead of leaving a blank map.
+   */
+  onAuthError?: (err: Error) => void
   center: [number, number]
   zoom: number
 }
@@ -180,6 +208,7 @@ export function FuelMap({
   selectedFuelType,
   onStationSelect,
   onBoundsChange,
+  onAuthError,
   center,
   zoom,
 }: FuelMapProps) {
@@ -201,6 +230,18 @@ export function FuelMap({
   fuelTypeRef.current = selectedFuelType
   onStationSelectRef.current = onStationSelect
   onBoundsChangeRef.current = onBoundsChange
+
+  // Keep the module-level auth-error handler in sync with the current prop so
+  // MapKit's singleton authorizationCallback can surface failures to whatever
+  // FuelMap is currently mounted. Cleared on unmount.
+  useEffect(() => {
+    authErrorHandlerRef.current = onAuthError ?? null
+    return () => {
+      if (authErrorHandlerRef.current === (onAuthError ?? null)) {
+        authErrorHandlerRef.current = null
+      }
+    }
+  }, [onAuthError])
 
   const { resolvedTheme } = useTheme()
 
