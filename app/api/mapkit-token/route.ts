@@ -14,19 +14,28 @@ export async function GET(req: NextRequest) {
   }
 
   const now = Math.floor(Date.now() / 1000)
-  const token = jwt.sign(
-    {
-      iss: teamId,
-      iat: now,
-      exp: now + 60 * 30,
-      origin: req.nextUrl.origin,
-    },
-    privateKey,
-    {
-      algorithm: "ES256",
-      header: { alg: "ES256", kid: keyId, typ: "JWT" },
-    },
-  )
+  let token: string
+  try {
+    token = jwt.sign(
+      {
+        iss: teamId,
+        iat: now,
+        exp: now + 60 * 30,
+        origin: req.nextUrl.origin,
+      },
+      privateKey,
+      {
+        algorithm: "ES256",
+        header: { alg: "ES256", kid: keyId, typ: "JWT" },
+      },
+    )
+  } catch (err) {
+    // Most commonly thrown when MAPKIT_PRIVATE_KEY is malformed (bad PEM,
+    // wrong curve, or mangled newline escaping). Log the underlying error
+    // for debugging but don't echo it — it may quote key material.
+    console.error("Failed to sign MapKit token:", err)
+    return new Response("Failed to sign MapKit token", { status: 500 })
+  }
 
   return new Response(token, {
     headers: {
