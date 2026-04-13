@@ -278,6 +278,10 @@ export function FuelMap({
   // Initialize map
   useEffect(() => {
     let cancelled = false
+    // Hoisted so the cleanup function can explicitly unregister the listener
+    // before destroying the map, rather than relying on destroy() to sweep it.
+    let mapInstance: any = null
+    let regionChangeEndHandler: (() => void) | null = null
     const annotations = annotationsRef.current
 
     loadMapkit()
@@ -313,6 +317,8 @@ export function FuelMap({
           syncAnnotations()
         }
         map.addEventListener("region-change-end", onRegionChangeEnd)
+        mapInstance = map
+        regionChangeEndHandler = onRegionChangeEnd
 
         mapRef.current = map
         readyRef.current = true
@@ -326,12 +332,24 @@ export function FuelMap({
 
     return () => {
       cancelled = true
-      if (mapRef.current) {
+      if (mapInstance) {
+        if (regionChangeEndHandler) {
+          try {
+            mapInstance.removeEventListener(
+              "region-change-end",
+              regionChangeEndHandler,
+            )
+          } catch {
+            // ignore teardown errors
+          }
+          regionChangeEndHandler = null
+        }
         try {
-          mapRef.current.destroy()
+          mapInstance.destroy()
         } catch {
           // ignore teardown errors
         }
+        mapInstance = null
         mapRef.current = null
         readyRef.current = false
         annotations.clear()
