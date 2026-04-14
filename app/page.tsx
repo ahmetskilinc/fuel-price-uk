@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { SearchPanel } from "@/components/search-panel"
+import { StationDetailsSheet } from "@/components/station-details-sheet"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Menu01Icon } from "@hugeicons/core-free-icons"
 import type {
@@ -53,6 +54,9 @@ export default function Page() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [searchOrigin, setSearchOrigin] = useState<SearchOrigin | null>(null)
   const [radiusMiles, setRadiusMiles] = useState<number>(5)
+  const [selectedStation, setSelectedStation] = useState<FuelStation | null>(
+    null,
+  )
 
   useEffect(() => {
     async function fetchData() {
@@ -86,8 +90,14 @@ export default function Page() {
     setMobileOpen(false)
   }, [])
 
-  // Called from map marker click — popup opens automatically, no need to pan
-  const handleMapSelect = useCallback(() => {}, [])
+  // Called from map marker click — open the station details sheet.
+  const handleMapSelect = useCallback((station: FuelStation) => {
+    setSelectedStation(station)
+  }, [])
+
+  const handleDetailsClose = useCallback(() => {
+    setSelectedStation(null)
+  }, [])
 
   const handleBoundsChange = useCallback((bounds: MapBounds) => {
     setMapBounds(bounds)
@@ -144,6 +154,13 @@ export default function Page() {
             </SheetContent>
           </Sheet>
         </div>
+
+        {/* Station details sheet (opens on marker click) */}
+        <StationDetailsSheet
+          station={selectedStation}
+          lastUpdated={lastUpdated}
+          onClose={handleDetailsClose}
+        />
 
         {/* Loading overlay */}
         {loading && (

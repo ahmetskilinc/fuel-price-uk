@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import type { FuelStation, FuelType, MapBounds } from "@/lib/types"
-import { FUEL_TYPE_SHORT } from "@/lib/types"
+import { getPriceColor } from "@/lib/fuel"
 
 // Minimal ambient typing for the slice of MapKit JS we touch.
 // The full surface is large; we only annotate what we call.
@@ -82,25 +82,6 @@ function initMapkit() {
   })
 }
 
-function formatPrice(price: number | null): string {
-  if (price == null) return "N/A"
-  return `${price.toFixed(1)}p`
-}
-
-function getPriceColor(price: number | null, fuelType: FuelType): string {
-  if (price == null) return "#94a3b8"
-  if (fuelType === "B7" || fuelType === "SDV") {
-    if (price < 135) return "#22c55e"
-    if (price < 145) return "#eab308"
-    if (price < 155) return "#f97316"
-    return "#ef4444"
-  }
-  if (price < 130) return "#22c55e"
-  if (price < 140) return "#eab308"
-  if (price < 150) return "#f97316"
-  return "#ef4444"
-}
-
 function stationKey(station: FuelStation): string {
   return (
     station.site_id ||
@@ -133,51 +114,6 @@ function createMarkerElement(
     transform: translate(-50%, -50%);
   `
   el.textContent = label
-  return el
-}
-
-function createCalloutElement(station: FuelStation): HTMLElement {
-  const el = document.createElement("div")
-  el.style.cssText = `
-    font-family: system-ui, -apple-system, sans-serif;
-    min-width: 220px;
-    padding: 12px 14px;
-    background: var(--popover, #fff);
-    color: var(--popover-foreground, #111);
-    border-radius: 12px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.18);
-  `
-
-  const title = document.createElement("div")
-  title.style.cssText = "font-weight: 600; font-size: 14px; margin-bottom: 4px;"
-  title.textContent = station.brand
-
-  const addr = document.createElement("div")
-  addr.style.cssText =
-    "font-size: 12px; color: #666; margin-bottom: 8px;"
-  addr.textContent = station.address
-
-  const grid = document.createElement("div")
-  grid.style.cssText =
-    "display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px;"
-
-  const row = (name: string, price: number | null) => {
-    const div = document.createElement("div")
-    const strong = document.createElement("strong")
-    strong.textContent = `${name}: `
-    div.appendChild(strong)
-    div.append(formatPrice(price))
-    return div
-  }
-
-  grid.appendChild(row(FUEL_TYPE_SHORT.E10, station.prices.E10))
-  grid.appendChild(row(FUEL_TYPE_SHORT.B7, station.prices.B7))
-  grid.appendChild(row(FUEL_TYPE_SHORT.E5, station.prices.E5))
-  grid.appendChild(row(FUEL_TYPE_SHORT.SDV, station.prices.SDV))
-
-  el.appendChild(title)
-  el.appendChild(addr)
-  el.appendChild(grid)
   return el
 }
 
@@ -301,10 +237,7 @@ export function FuelMap({
         () => createMarkerElement(station, fuelTypeRef.current),
         {
           data: { station },
-          calloutEnabled: true,
-          callout: {
-            calloutElementForAnnotation: () => createCalloutElement(station),
-          },
+          calloutEnabled: false,
         },
       )
       const selectHandler = () => {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { unstable_cache } from "next/cache"
 import type { FuelStation, FuelDataResponse } from "@/lib/types"
 
 const RETAILER_ENDPOINTS: Record<string, string> = {
@@ -78,7 +79,9 @@ async function fetchRetailer(
   }
 }
 
-export async function GET() {
+// Aggregates all retailer feeds into a single FuelDataResponse. Throws when
+// every retailer fails so we don't poison the cache with an empty result.
+async function fetchAllStations(): Promise<FuelDataResponse> {
   const results = await Promise.allSettled(
     Object.entries(RETAILER_ENDPOINTS).map(([brand, url]) =>
       fetchRetailer(brand, url),
@@ -89,14 +92,45 @@ export async function GET() {
     r.status === "fulfilled" ? r.value : [],
   )
 
-  const response: FuelDataResponse = {
+  if (allStations.length === 0) {
+    throw new Error("All retailer feeds failed")
+  }
+
+  return {
     last_updated: new Date().toISOString(),
     stations: allStations,
   }
+}
 
-  return NextResponse.json(response, {
-    headers: {
-      "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800",
-    },
-  })
+// In-memory server-side memoization of the aggregated response. Coalesces
+// concurrent cold requests onto a single upstream fan-out and serves repeat
+// requests without re-normalizing the payload. Same 15-minute window as the
+// per-retailer `next.revalidate` and the response `Cache-Control` header.
+const getCachedFuelData = unstable_cache(
+  fetchAllStations,
+  ["fuel-prices-aggregated-v1"],
+  { revalidate: 900, tags: ["fuel-prices"] },
+)
+
+export async function GET() {
+  try {
+    const data = await getCachedFuelData()
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800",
+      },
+    })
+  } catch {
+    // All retailers failed — return 503 with an empty payload so clients can
+    // render an error state. Not cached (the throw skips unstable_cache), so
+    // the next request will retry the upstream fetches.
+    const fallback: FuelDataResponse = {
+      last_updated: new Date().toISOString(),
+      stations: [],
+    }
+    return NextResponse.json(fallback, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    })
+  }
 }
